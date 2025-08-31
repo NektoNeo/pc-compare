@@ -60,7 +60,7 @@ git commit -m "Initial commit: VK PC Build Comparator"
 ### 4. Подключение к GitHub
 
 ```bash
-git remote add origin https://github.com/YOUR_USERNAME/pc-compare.git
+git remote add origin https://github.com/nektoneo/pc-compare.git
 git branch -M main
 git push -u origin main
 ```
