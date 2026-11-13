@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # PC Compare Deployment Script - PART 1
 # Подготовка инфраструктуры и получение URL для VK OAuth
@@ -15,17 +16,19 @@ apt install -y python3 python3-pip nginx git docker.io docker-compose curl
 
 # Step 2: Clone repository
 echo -e "\n[Step 2] Cloning repository..."
-cd /opt
-if [ -d "pc-compare" ]; then
-    echo "Directory pc-compare already exists, removing..."
-    rm -rf pc-compare
+if [ -e /opt/pc-compare ]; then
+    echo "Existing deployment found. Keep its environment and database; this installer is for a new installation." >&2
+    exit 1
 fi
-git clone https://github.com/serjnavigatian/pc-compare.git pc-compare
-cd pc-compare
+git clone https://github.com/NektoNeo/pc-compare.git /opt/pc-compare
+cd /opt/pc-compare
 
 # Step 3: Create temporary .env file with placeholders
+db_password=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
+application_key=$(python3 -c 'import secrets; print(secrets.token_hex(32))')
 echo -e "\n[Step 3] Creating temporary .env configuration..."
-cat > .env <<'EOF'
+umask 077
+cat > .env <<EOF
 # VK API Configuration - WILL BE FILLED IN PART 2
 VK_CLIENT_ID=PLACEHOLDER_WILL_BE_FILLED
 VK_CLIENT_SECRET=PLACEHOLDER_WILL_BE_FILLED
@@ -34,9 +37,9 @@ PUBLIC_BASE_URL=https://pc.builds.ngrok.app
 VK_API_VERSION=5.199
 
 # Database Configuration
-DATABASE_URL=postgresql://pc_builds_user:secure_password_2024@db:5432/pc_builds
+DATABASE_URL=postgresql://pc_builds_user:${db_password}@db:5432/pc_builds
 POSTGRES_USER=pc_builds_user
-POSTGRES_PASSWORD=secure_password_2024
+POSTGRES_PASSWORD=${db_password}
 POSTGRES_DB=pc_builds
 
 # Parser Settings
@@ -54,7 +57,7 @@ REACT_APP_WS_URL=wss://pc.builds.ngrok.app/ws
 REDIS_URL=redis://redis:6379/0
 
 # Security
-SECRET_KEY=pc-compare-secret-key-2024-production
+SECRET_KEY=${application_key}
 ALLOWED_ORIGINS=https://pc.builds.ngrok.app,http://localhost:3000
 
 # ML Model Settings

@@ -182,3 +182,7 @@ MIT License - см. [LICENSE](LICENSE) для деталей.
 ---
 
 ⭐ Если проект оказался полезным, поставьте звезду на GitHub!
+
+## Existing PostgreSQL deployments
+
+Keep a backup of the database and the current server configuration before rotating credentials. Change the role password in PostgreSQL through a trusted administrative session, then update both `POSTGRES_PASSWORD` and the password in `DATABASE_URL` in the deployment secret store and restart the application. Verify a database-backed request. Changing only the environment does not rotate an existing role. Use a URL-safe random password, or percent-encode the password in the URI. The fresh-install scripts create independent random database and application secrets; run part 2 in the existing deployment to update only its VK configuration.

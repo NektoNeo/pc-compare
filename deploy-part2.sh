@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # PC Compare Deployment Script - PART 2
 # Финальная настройка с VK credentials
@@ -21,8 +22,11 @@ cd /opt/pc-compare
 echo -e "\n📝 Please enter your VK Application credentials:\n"
 
 read -p "Enter VK App ID (CLIENT_ID): " VK_CLIENT_ID
-read -p "Enter VK Secure Key (CLIENT_SECRET): " VK_CLIENT_SECRET
-read -p "Enter VK Service Token (starts with vk1.a.): " VK_TOKEN
+read -rs -p "Enter VK Secure Key (CLIENT_SECRET): " VK_CLIENT_SECRET
+printf '\n'
+read -rs -p "Enter VK Service Token (starts with vk1.a.): " VK_TOKEN
+
+printf '\n'
 
 # Optional: Get VK Group IDs
 echo -e "\n📝 Enter VK Group IDs to parse (optional):"
@@ -38,49 +42,29 @@ fi
 # Step 2: Update .env file with real credentials
 echo -e "\n[Step 2] Updating configuration with your credentials..."
 
-cat > .env <<EOF
-# VK API Configuration
-VK_CLIENT_ID=${VK_CLIENT_ID}
-VK_CLIENT_SECRET=${VK_CLIENT_SECRET}
-VK_TOKEN=${VK_TOKEN}
-PUBLIC_BASE_URL=https://pc.builds.ngrok.app
-VK_API_VERSION=5.199
+export VK_CLIENT_ID VK_CLIENT_SECRET VK_TOKEN VK_GROUP_IDS_INPUT
+python3 - <<'PY'
+import os
+import re
+import tempfile
+from pathlib import Path
 
-# Database Configuration
-DATABASE_URL=postgresql://pc_builds_user:secure_password_2024@db:5432/pc_builds
-POSTGRES_USER=pc_builds_user
-POSTGRES_PASSWORD=secure_password_2024
-POSTGRES_DB=pc_builds
-
-# Parser Settings
-MIN_PRICE=40000
-PRICE_COMPARISON_RANGE=50000
-
-# VK Groups to Parse
-VK_GROUP_IDS=${VK_GROUP_IDS_INPUT}
-
-# Frontend Configuration
-REACT_APP_API_URL=https://pc.builds.ngrok.app/api
-REACT_APP_WS_URL=wss://pc.builds.ngrok.app/ws
-
-# Redis Configuration
-REDIS_URL=redis://redis:6379/0
-
-# Security
-SECRET_KEY=pc-compare-secret-key-2024-production-$(date +%s)
-ALLOWED_ORIGINS=https://pc.builds.ngrok.app,http://localhost:3000
-
-# ML Model Settings
-USE_ML_COLOR_DETECTION=true
-ML_MODEL_PATH=/app/models
-
-# Logging
-LOG_LEVEL=INFO
-LOG_FILE=/app/logs/app.log
-
-# Development
-DEBUG=false
-EOF
+path = Path('.env')
+updates = {name: os.environ[name] for name in ('VK_CLIENT_ID', 'VK_CLIENT_SECRET', 'VK_TOKEN')}
+updates['VK_GROUP_IDS'] = os.environ['VK_GROUP_IDS_INPUT']
+if any(not re.fullmatch(r'[A-Za-z0-9_.,-]+', value) for value in updates.values()):
+    raise SystemExit('VK settings must contain non-empty IDs, tokens and comma-separated group IDs.')
+lines = path.read_text().splitlines()
+for index, line in enumerate(lines):
+    key, separator, _ = line.partition('=')
+    if separator and key in updates:
+        lines[index] = key + '=' + updates.pop(key)
+lines.extend(key + '=' + value for key, value in updates.items())
+with tempfile.NamedTemporaryFile('w', dir=path.parent, delete=False) as replacement:
+    replacement.write('\n'.join(lines) + '\n')
+os.replace(replacement.name, path)
+PY
+unset VK_CLIENT_SECRET VK_TOKEN
 
 echo "✅ Configuration updated!"
 

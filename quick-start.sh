@@ -10,8 +10,9 @@ echo ""
 # Check if .env exists
 if [ ! -f .env ]; then
     echo "📝 Creating .env file from template..."
+    umask 077
     cp .env.example .env
-    echo "⚠️  Please edit .env file with your VK credentials!"
+    echo "⚠️  Set VK credentials, POSTGRES_PASSWORD, DATABASE_URL and SECRET_KEY in .env before continuing."
     echo ""
 fi
 
